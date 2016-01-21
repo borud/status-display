@@ -24,13 +24,16 @@
 #define SERVO_MIN    1
 #define SERVO_MAX  179
 
+#define SERVO_MIN_PULSE_WIDTH 500
+#define SERVO_MAX_PULSE_WIDTH 2500
+
 #define FIRST_SERVO_PIN     7
 #define ENABLE_PIN          3
 #define SERIAL_BUFFER_SIZE 80
 
 // Whenever we write to the servos we keep the power on for
 // a few seconds to make sure the servos have time to react.
-#define WAKEUP_MILLIS           3000
+#define WAKEUP_MILLIS           2100
 
 // Wake up servos every 10 minutes to adjust for drift
 #define PERIODIC_WAKEUP_MILLIS  600000l
@@ -60,7 +63,7 @@ void setup() {
     
     // Attach all the servos and "zero" the values
     for (int i = 0; i < NUM_SERVOS; i++) {
-        servos[i].attach(FIRST_SERVO_PIN + i);
+        servos[i].attach(FIRST_SERVO_PIN + i, SERVO_MIN_PULSE_WIDTH, SERVO_MAX_PULSE_WIDTH);
         servos[i].write(MAP_SERVO(0));
     }
     
@@ -82,6 +85,12 @@ void servo_wakeup() {
     digitalWrite(ENABLE_PIN, HIGH);
     last_wakeup = millis();
     wakeup = true;
+
+    // Attach all the servos
+    for (int i = 0; i < NUM_SERVOS; i++) {
+        servos[i].attach(FIRST_SERVO_PIN + i, SERVO_MIN_PULSE_WIDTH, SERVO_MAX_PULSE_WIDTH);
+    }
+    
     Serial.println("110 SERVO ON");
 }
 
@@ -89,6 +98,7 @@ void servo_wakeup() {
  * This gets called from the main loop to determine if we are in
  * wakeup mode and if so, if it is time to set the enable pin low and
  * shut down the servos.
+ *
  */
 void servo_wakeup_timeout() {
     long now = millis();
@@ -97,6 +107,12 @@ void servo_wakeup_timeout() {
         if ((now - last_wakeup) > WAKEUP_MILLIS) {
             digitalWrite(ENABLE_PIN, LOW);
             wakeup = false;
+
+            // For some reason the lower spec servos I've tried tend to 
+            for (int i = 0; i < NUM_SERVOS; i++) {
+                servos[i].detach();
+            }
+            
             Serial.println("111 SERVO OFF");
         }
     }
